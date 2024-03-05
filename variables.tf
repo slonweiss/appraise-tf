@@ -32,13 +32,13 @@ variable "zone" {
 variable "deployment_name" {
   type        = string
   description = "The name of this particular deployment, will get added as a prefix to most resources."
-  default     = "three-tier-app"
+  default     = "appraise"
 }
 
 variable "labels" {
   type        = map(string)
   description = "A map of labels to apply to contained resources."
-  default     = { "three-tier-app" = true }
+  default     = { "appraise" = true }
 }
 
 variable "enable_apis" {
