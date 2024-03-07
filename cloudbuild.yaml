@@ -1,0 +1,26 @@
+steps:
+  # Step 1: Initialize Terraform
+  - name: "hashicorp/terraform:latest"
+    args:
+      [
+        "init",
+        "-backend-config=bucket=${_TERRAFORM_STATE_BUCKET}",
+        "-backend-config=prefix=${_TERRAFORM_STATE_PREFIX}",
+      ]
+
+  # Step 2: Terraform Plan
+  - name: "hashicorp/terraform:latest"
+    args: ["plan", "-out=tfplan"]
+
+  # Step 3: Terraform Apply
+  - name: "hashicorp/terraform:latest"
+    args: ["apply", "-auto-approve", "tfplan"]
+
+# Note: Remove '-auto-approve' for manual approval in real scenarios
+
+timeout: "1200s" # Adjust based on expected completion time
+
+# Substitute variables
+substitutions:
+  _TERRAFORM_STATE_BUCKET: "appraise-terraform-state"
+  _TERRAFORM_STATE_PREFIX: "terraform/state"

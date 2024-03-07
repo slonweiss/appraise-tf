@@ -20,7 +20,8 @@ data "google_project" "project" {
 
 locals {
   api_image = "gcr.io/sic-container-repo/todo-api-postgres:latest"
-  fe_image  = "gcr.io/sic-container-repo/todo-fe"
+  fe_image  = "slonnyboy/react-front-end:latest"
+  geoserver_image = "docker.osgeo.org/geoserver:2.24.1"
 }
 
 module "project-services" {
@@ -117,7 +118,7 @@ resource "random_id" "id" {
 # Handle Database
 resource "google_sql_database_instance" "main" {
   name             = "${var.deployment_name}-db-${random_id.id.hex}"
-  database_version = "POSTGRES_15"
+  database_version = "POSTGRES_14"
   region           = var.region
   project          = var.project_id
 
@@ -161,6 +162,35 @@ resource "google_sql_database" "database" {
   name            = "todo"
   instance        = google_sql_database_instance.main.name
   deletion_policy = "ABANDON"
+}
+
+resource "google_cloud_run_service" "geoserver" {
+  name     = "${var.deployment_name}-geoserver"
+  location = var.region
+  project  = var.project_id
+
+  template {
+    spec {
+      service_account_name = google_service_account.runsa.email
+      containers {
+        image = local.geoserver_image
+        ports {
+          container_port = 8080 // Update this if your Docker image uses a different port
+        }
+      }
+    }
+    metadata {
+      annotations = {
+        "autoscaling.knative.dev/maxScale" = "8"
+      }
+      labels = {
+        "run.googleapis.com/startupProbeType" = "Default"
+      }
+    }
+  }
+  metadata {
+    labels = var.labels
+  }
 }
 
 resource "google_cloud_run_service" "api" {
@@ -256,6 +286,14 @@ resource "google_cloud_run_service" "fe" {
   metadata {
     labels = var.labels
   }
+}
+
+resource "google_cloud_run_service_iam_member" "noauth_geoserver" {
+  location = google_cloud_run_service.geoserver.location
+  project  = google_cloud_run_service.geoserver.project
+  service  = google_cloud_run_service.geoserver.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
 }
 
 resource "google_cloud_run_service_iam_member" "noauth_api" {
