@@ -8,13 +8,14 @@ steps:
         "-backend-config=prefix=${_TERRAFORM_STATE_PREFIX}",
       ]
 
-  # Step 2: Terraform Plan
+  # Step 2: Terraform Plan (Corrected to include the planning step)
+  - name: "hashicorp/terraform:latest"
+    args: ["plan", "-out=tfplan"]
+
+  # Step 3: Terraform Apply (Now correctly applying the generated plan)
   - name: "hashicorp/terraform:latest"
     args: ["apply", "-auto-approve", "tfplan"]
     env: ["TF_LOG=DEBUG"]
-  # Step 3: Terraform Apply
-  - name: "hashicorp/terraform:latest"
-    args: ["apply", "-auto-approve", "tfplan"]
 
 # Note: Remove '-auto-approve' for manual approval in real scenarios
 
