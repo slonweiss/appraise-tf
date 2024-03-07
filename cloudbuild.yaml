@@ -10,8 +10,8 @@ steps:
 
   # Step 2: Terraform Plan
   - name: "hashicorp/terraform:latest"
-    args: ["plan", "-out=tfplan"]
-
+    args: ["apply", "-auto-approve", "tfplan"]
+    env: ["TF_LOG=DEBUG"]
   # Step 3: Terraform Apply
   - name: "hashicorp/terraform:latest"
     args: ["apply", "-auto-approve", "tfplan"]
