@@ -19,7 +19,12 @@ steps:
 # Note: Remove '-auto-approve' for manual approval in real scenarios
 
 timeout: "1200s" # Adjust based on expected completion time
-build.logs_bucket: gs://appraise-estate-logs.
+
+options:
+  # Specify logging options here
+  logging: CLOUD_LOGGING_ONLY # Or NONE to disable logging
+  logsBucket: gs://appraise-estate-logs # Specify the logs bucket here
+
 # Substitute variables
 substitutions:
   _TERRAFORM_STATE_BUCKET: "appraise-terraform-state"
