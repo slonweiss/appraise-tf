@@ -18,6 +18,12 @@ data "google_project" "project" {
   project_id = var.project_id
 }
 
+provider "google" {
+  project = var.project_id
+  region  = var.region
+  zone    = var.zone
+}
+
 locals {
   api_image = "gcr.io/sic-container-repo/todo-api-postgres:latest"
   fe_image  = "slonnyboy/react-front-end:latest"
