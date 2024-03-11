@@ -124,7 +124,7 @@ resource "random_id" "id" {
 # Handle Database
 resource "google_sql_database_instance" "main" {
   name             = "${var.deployment_name}-db-${random_id.id.hex}"
-  database_version = "POSTGRES_14"
+  database_version = "POSTGRES_15"
   region           = var.region
   project          = var.project_id
 
@@ -188,6 +188,7 @@ resource "google_cloud_run_service" "geoserver" {
     metadata {
       annotations = {
         "autoscaling.knative.dev/maxScale" = "8"
+        "run.googleapis.com/ingress" = "all"
       }
       labels = {
         "run.googleapis.com/startupProbeType" = "Default"
