@@ -317,3 +317,10 @@ resource "google_cloud_run_service_iam_member" "noauth_fe" {
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
+
+terraform {
+  backend "gcs" {
+    bucket  = "appraise-terraform-state"
+    prefix  = "terraform/state"
+  }
+}
