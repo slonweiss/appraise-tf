@@ -175,7 +175,7 @@ resource "google_container_cluster" "primary" {
   name     = "${var.deployment_name}-cluster"
   location = var.zone
   project  = var.project_id
-
+  remove_default_node_pool = true
   initial_node_count = 1
 
   master_auth {
@@ -230,6 +230,24 @@ resource "kubernetes_deployment" "geoserver" {
   }
 }
 
+resource "kubernetes_persistent_volume" "geoserver" {
+  metadata {
+    name = "examplevolumename"
+  }
+  spec {
+    capacity = {
+      storage = "10Gi"
+    }
+    access_modes = ["ReadWriteMany"]
+    persistent_volume_source {
+      gce_persistent_disk {
+        pd_name = "test-123"
+        volume_path = "/opt/geoserver_data"
+      }
+    }
+  }
+}
+
 resource "kubernetes_storage_class" "geoserver_disk" {
   metadata {
     name = "${var.deployment_name}-geoserver-disk"
@@ -252,9 +270,10 @@ resource "kubernetes_persistent_volume_claim" "geoserver_disk" {
 
     resources {
       requests = {
-        storage = "5Gi"
+        storage = "2Gi"
       }
     }
+    volume_name = "${kubernetes_persistent_volume.example.metadata.0.name}"
   }
 }
 resource "google_cloud_run_service" "api" {
