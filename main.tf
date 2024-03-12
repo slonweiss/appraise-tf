@@ -341,14 +341,6 @@ resource "google_cloud_run_service" "fe" {
   }
 }
 
-resource "google_cloud_run_service_iam_member" "noauth_geoserver" {
-  location = google_cloud_run_service.geoserver.location
-  project  = google_cloud_run_service.geoserver.project
-  service  = google_cloud_run_service.geoserver.name
-  role     = "roles/run.invoker"
-  member   = "allUsers"
-}
-
 resource "google_cloud_run_service_iam_member" "noauth_api" {
   location = google_cloud_run_service.api.location
   project  = google_cloud_run_service.api.project
