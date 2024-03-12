@@ -241,7 +241,7 @@ resource "kubernetes_persistent_volume_claim" "geoserver_disk" {
 
     resources {
       requests = {
-        storage = "5Gi"
+        storage = "9Gi"
       }
     }
   }
