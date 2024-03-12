@@ -27,7 +27,7 @@ provider "google" {
 locals {
   api_image = "gcr.io/sic-container-repo/todo-api-postgres:latest"
   fe_image  = "slonnyboy/react-front-end:latest"
-  geoserver_image = "docker.osgeo.org/geoserver:2.24.1"
+  geoserver_image = "gcr.io/linear-equator-414922/geoserver:latest"
 }
 
 module "project-services" {
@@ -181,14 +181,20 @@ resource "google_cloud_run_service" "geoserver" {
       containers {
         image = local.geoserver_image
         ports {
-          container_port = 8080 // Update this if your Docker image uses a different port
+          name           = "http1"
+          container_port = 8080
+        }
+        resources {
+          limits = {
+            cpu    = "2"
+            memory = "2048Mi"
+          }
         }
       }
     }
     metadata {
       annotations = {
         "autoscaling.knative.dev/maxScale" = "8"
-        "run.googleapis.com/ingress" = "all"
       }
       labels = {
         "run.googleapis.com/startupProbeType" = "Default"
@@ -197,6 +203,9 @@ resource "google_cloud_run_service" "geoserver" {
   }
   metadata {
     labels = var.labels
+    annotations = {
+      "run.googleapis.com/ingress" = "all"
+    }
   }
 }
 
