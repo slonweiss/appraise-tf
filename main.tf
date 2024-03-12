@@ -242,7 +242,6 @@ resource "kubernetes_persistent_volume" "geoserver" {
     persistent_volume_source {
       gce_persistent_disk {
         pd_name = "test-123"
-        volume_path = "/opt/geoserver_data"
       }
     }
   }
