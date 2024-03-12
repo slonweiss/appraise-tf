@@ -169,6 +169,7 @@ resource "google_sql_database" "database" {
   instance        = google_sql_database_instance.main.name
   deletion_policy = "ABANDON"
 }
+
 # Create a GKE cluster
 resource "google_container_cluster" "primary" {
   name     = "${var.deployment_name}-cluster"
@@ -178,9 +179,6 @@ resource "google_container_cluster" "primary" {
   initial_node_count = 3
 
   master_auth {
-    username = ""
-    password = ""
-
     client_certificate_config {
       issue_client_certificate = false
     }
@@ -194,7 +192,7 @@ resource "kubernetes_deployment" "geoserver" {
   }
 
   spec {
-    replicas = 3
+    replicas = 1
 
     selector {
       match_labels = {
@@ -215,7 +213,7 @@ resource "kubernetes_deployment" "geoserver" {
           name  = "geoserver"
 
           volume_mount {
-            mount_path = "/path/to/mount"
+            mount_path = "/opt/geoserver_data/"
             name       = "geoserver-disk"
           }
         }
