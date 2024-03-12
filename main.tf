@@ -272,7 +272,6 @@ resource "kubernetes_persistent_volume_claim" "geoserver_disk" {
         storage = "2Gi"
       }
     }
-    volume_name = "${kubernetes_persistent_volume.example.metadata.0.name}"
   }
 }
 resource "google_cloud_run_service" "api" {
