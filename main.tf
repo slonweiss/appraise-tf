@@ -230,6 +230,16 @@ resource "kubernetes_deployment" "geoserver" {
   }
 }
 
+resource "kubernetes_storage_class" "geoserver_disk" {
+  metadata {
+    name = "${var.deployment_name}-geoserver-disk"
+  }
+  storage_provisioner = "kubernetes.io/gce-pd"
+  parameters = {
+    type = "pd-standard"
+  }
+}
+
 # Create a Persistent Volume Claim
 resource "kubernetes_persistent_volume_claim" "geoserver_disk" {
   metadata {
@@ -238,10 +248,11 @@ resource "kubernetes_persistent_volume_claim" "geoserver_disk" {
 
   spec {
     access_modes = ["ReadWriteOnce"]
+    storage_class_name = kubernetes_storage_class.geoserver_disk.metadata.0.name
 
     resources {
       requests = {
-        storage = "8Gi"
+        storage = "5Gi"
       }
     }
   }
