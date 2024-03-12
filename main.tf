@@ -169,46 +169,85 @@ resource "google_sql_database" "database" {
   instance        = google_sql_database_instance.main.name
   deletion_policy = "ABANDON"
 }
-
-resource "google_cloud_run_service" "geoserver" {
-  name     = "${var.deployment_name}-geoserver"
+# Create a GKE cluster
+resource "google_container_cluster" "primary" {
+  name     = "${var.deployment_name}-cluster"
   location = var.region
   project  = var.project_id
 
-  template {
-    spec {
-      service_account_name = google_service_account.runsa.email
-      containers {
-        image = local.geoserver_image
-        ports {
-          name           = "http1"
-          container_port = 8080
-        }
-        resources {
-          limits = {
-            cpu    = "2"
-            memory = "2048Mi"
-          }
-        }
-      }
-    }
-    metadata {
-      annotations = {
-        "autoscaling.knative.dev/maxScale" = "8"
-      }
-      labels = {
-        "run.googleapis.com/startupProbeType" = "Default"
-      }
-    }
-  }
-  metadata {
-    labels = var.labels
-    annotations = {
-      "run.googleapis.com/ingress" = "all"
+  initial_node_count = 3
+
+  master_auth {
+    username = ""
+    password = ""
+
+    client_certificate_config {
+      issue_client_certificate = false
     }
   }
 }
 
+# Create a Kubernetes Deployment
+resource "kubernetes_deployment" "geoserver" {
+  metadata {
+    name = "${var.deployment_name}-geoserver"
+  }
+
+  spec {
+    replicas = 3
+
+    selector {
+      match_labels = {
+        App = "${var.deployment_name}-geoserver"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          App = "${var.deployment_name}-geoserver"
+        }
+      }
+
+      spec {
+        container {
+          image = local.geoserver_image
+          name  = "geoserver"
+
+          volume_mount {
+            mount_path = "/path/to/mount"
+            name       = "geoserver-disk"
+          }
+        }
+
+        volume {
+          name = "geoserver-disk"
+
+          persistent_volume_claim {
+            claim_name = kubernetes_persistent_volume_claim.geoserver_disk.metadata[0].name
+          }
+        }
+      }
+    }
+  }
+}
+
+# Create a Persistent Volume Claim
+resource "kubernetes_persistent_volume_claim" "geoserver_disk" {
+  metadata {
+    name = "${var.deployment_name}-geoserver-disk"
+  }
+
+  spec {
+    access_modes = ["ReadWriteOnce"]
+
+    resources {
+      requests = {
+        storage = "5Gi"
+      }
+    }
+  }
+}
 resource "google_cloud_run_service" "api" {
   name     = "${var.deployment_name}-api"
   provider = google-beta

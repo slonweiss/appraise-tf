@@ -53,5 +53,6 @@ variable "run_roles_list" {
   default = [
     "roles/cloudsql.instanceUser",
     "roles/cloudsql.client",
+    "roles/storage.admin",
   ]
 }
