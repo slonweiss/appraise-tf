@@ -173,10 +173,10 @@ resource "google_sql_database" "database" {
 # Create a GKE cluster
 resource "google_container_cluster" "primary" {
   name     = "${var.deployment_name}-cluster"
-  location = var.region
+  location = var.zone
   project  = var.project_id
 
-  initial_node_count = 3
+  initial_node_count = 1
 
   master_auth {
     client_certificate_config {
