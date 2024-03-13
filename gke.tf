@@ -14,6 +14,18 @@ resource "google_container_cluster" "primary" {
   }
 }
 
+# Small Linux node pool to run some Linux-only Kubernetes Pods.
+resource "google_container_node_pool" "linux_pool" {
+  name               = "linux-pool"
+  project            = google_container_cluster.demo_cluster.project
+  cluster            = google_container_cluster.demo_cluster.name
+  location           = google_container_cluster.demo_cluster.location
+
+  node_config {
+    image_type   = "COS_CONTAINERD"
+  }
+}
+
 # Create a Kubernetes Deployment
 resource "kubernetes_deployment" "geoserver" {
   metadata {
