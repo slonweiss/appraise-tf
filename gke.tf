@@ -26,6 +26,50 @@ resource "google_container_node_pool" "linux_pool" {
   }
 }
 
+
+# Create a Persistent Disk
+resource "google_compute_disk" "geoserver_disk" {
+  name  = "${var.deployment_name}-geoserver-disk"
+  type  = "pd-standard"
+  zone  = var.zone
+  size  = 10
+}
+
+# Create a Kubernetes Persistent Volume
+resource "kubernetes_persistent_volume" "geoserver" {
+  metadata {
+    name = "${var.deployment_name}-geoserver-pv"
+  }
+  spec {
+    capacity = {
+      storage = "10Gi"
+    }
+    access_modes = ["ReadWriteOnce"]
+    persistent_volume_source {
+      gce_persistent_disk {
+        pd_name = google_compute_disk.geoserver_disk.name
+        fs_type = "ext4"
+      }
+    }
+  }
+}
+
+# Create a Kubernetes Persistent Volume Claim
+resource "kubernetes_persistent_volume_claim" "geoserver_disk" {
+  metadata {
+    name = "${var.deployment_name}-geoserver-pvc"
+  }
+  spec {
+    access_modes = ["ReadWriteOnce"]
+    resources {
+      requests = {
+        storage = "2Gi"
+      }
+    }
+    volume_name = kubernetes_persistent_volume.geoserver.metadata[0].name
+  }
+}
+
 # Create a Kubernetes Deployment
 resource "kubernetes_deployment" "geoserver" {
   metadata {
