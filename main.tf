@@ -33,7 +33,7 @@ terraform {
 
 locals {
   api_image = "gcr.io/sic-container-repo/todo-api-postgres:latest"
-  fe_image  = "slonnyboy/react-front-end:latest"
+  fe_image = "us-central1-docker.pkg.dev/linear-equator-414922/cloud-run-source-deploy/coreui-pro-react-admin-template-starter-v4.4.0/appraise-fe:79da3f09a9fb8aa15230cd64214ea066c9cd6309"
   geoserver_image = "gcr.io/linear-equator-414922/geoserver:latest"
 }
 
@@ -92,4 +92,3 @@ resource "google_cloud_run_service_iam_member" "noauth_fe" {
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
-

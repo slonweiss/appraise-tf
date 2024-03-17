@@ -15,6 +15,7 @@ resource "google_compute_global_address" "main" {
   project       = var.project_id
 }
 
+
 resource "google_service_networking_connection" "main" {
   network                 = google_compute_network.main.self_link
   service                 = "servicenetworking.googleapis.com"
