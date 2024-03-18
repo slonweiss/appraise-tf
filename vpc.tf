@@ -22,12 +22,19 @@ resource "google_service_networking_connection" "main" {
   reserved_peering_ranges = [google_compute_global_address.main.name]
 }
 
-resource "google_vpc_access_connector" "main" {
-  provider       = google-beta
-  project        = var.project_id
-  name           = "${var.deployment_name}-vpc-cx"
-  ip_cidr_range  = "10.8.0.0/28"
-  network        = google_compute_network.main.name
-  region         = var.region
-  max_throughput = 300
+
+# Cloud Router
+resource "google_compute_router" "geoserver_router" {
+  name    = "geoserver-router"
+  region  = "us-central1"
+  network = google_compute_network.main.id
+}
+
+# Cloud NAT
+resource "google_compute_router_nat" "geoserver_nat" {
+  name                               = "geoserver-nat"
+  router                             = google_compute_router.geoserver_router.name
+  region                             = "us-central1"
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 }

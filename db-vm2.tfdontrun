@@ -1,12 +1,11 @@
-resource "google_compute_instance" "postgres_instance" {
-  name         = "postgres-instance"
+resource "google_compute_instance" "postgres_instance2" {
+  name         = "postgres-instance2"
   machine_type = "e2-standard-2"
   zone         = "us-central1-a"
 
   boot_disk {
     initialize_params {
-      #image = "cos-cloud/cos-stable"
-      image = "ubuntu-os-cloud/ubuntu-2204-lts"
+      image = "debian-cloud/debian-12"
       size  = 10
     }
   }
@@ -15,27 +14,9 @@ resource "google_compute_instance" "postgres_instance" {
     network = "https://www.googleapis.com/compute/v1/projects/${var.project_id}/global/networks/${google_compute_network.main.name}"
   }
 
-  metadata_startup_script = <<-EOF
-    #!/bin/bash
-
-    # Install Docker
-    apt-get update
-    apt-get install -y docker.io
-
-    # Start Docker service
-    systemctl start docker
-    systemctl enable docker
-
-    # Run the Postgres container using the gce-container module
-    docker run -d -p 5432:5432 \
-      --name postgres \
-      -e POSTGRES_DB=${module.gce-container.container.env[0].value} \
-      -e POSTGRES_USER=${module.gce-container.container.env[1].value} \
-      -e POSTGRES_PASSWORD=${module.gce-container.container.env[2].value} \
-      -e PGDATA=${module.gce-container.container.env[3].value} \
-      -v ${module.gce-container.volumes[0].gcePersistentDisk.pdName}:${module.gce-container.container.volumeMounts[0].mountPath} \
-      ${module.gce-container.container.image}
-  EOF
+metadata = {
+    "gce-container-declaration" = module.gce-container.metadata_value
+}
 
   scheduling {
     preemptible      = true
@@ -52,8 +33,8 @@ resource "google_compute_instance" "postgres_instance" {
     ]
   }
   attached_disk {
-    source      = google_compute_disk.postgres_data.self_link
-    device_name = google_compute_disk.postgres_data.name
+    source      = google_compute_disk.postgres_data2.self_link
+    device_name = google_compute_disk.postgres_data2.name
   }
 }
 
@@ -97,7 +78,7 @@ resource "google_compute_firewall" "allow_gcr_access" {
   target_tags        = ["allow-gcr-access"]
 }
 
-resource "google_compute_disk" "postgres_data" {
+resource "google_compute_disk" "postgres_data2" {
   name  = "postgres-data"
   type  = "pd-ssd"
   zone  = "us-central1-a"
@@ -144,7 +125,7 @@ module "gce-container" {
       name = "data"
 
       gcePersistentDisk = {
-        pdName = google_compute_disk.postgres_data.name
+        pdName = google_compute_disk.postgres_data2.name
         fsType = "ext4"
       }
     }

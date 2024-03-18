@@ -77,13 +77,6 @@ resource "random_id" "id" {
   byte_length = 2
 }
 
-resource "google_cloud_run_service_iam_member" "noauth_api" {
-  location = google_cloud_run_service.api.location
-  project  = google_cloud_run_service.api.project
-  service  = google_cloud_run_service.api.name
-  role     = "roles/run.invoker"
-  member   = "allUsers"
-}
 
 resource "google_cloud_run_service_iam_member" "noauth_fe" {
   location = google_cloud_run_service.fe.location

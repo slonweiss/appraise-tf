@@ -39,25 +39,16 @@ resource "google_compute_instance" "geoserver" {
   metadata_startup_script = <<-EOF
   #!/bin/bash
 
-  # Update packages
+  # Update packages and install necessary software
   sudo apt-get update
+  sudo apt-get install -y openjdk-11-jdk unzip wget tomcat9
 
-  # Install Java
-  sudo apt-get install -y openjdk-17-jdk unzip wget
-
-  # Download and install GeoServer
-  if [ ! -d "/opt/geoserver-2.24.1" ]; then
-    # Download and install GeoServer
-    cd /opt
-    wget -O /opt/geoserver-2.24.1-bin.zip "https://sourceforge.net/projects/geoserver/files/GeoServer/2.24.1/geoserver-2.24.1-bin.zip/download"
-    unzip -d /opt/geoserver-2.24.1 geoserver-2.24.1-bin.zip
-    rm geoserver-2.24.1-bin.zip
+  # Download GeoServer WAR
+  if [ ! -f "/var/lib/tomcat9/webapps/geoserver.war" ]; then
+    wget -O /var/lib/tomcat9/webapps/geoserver.war "https://sourceforge.net/projects/geoserver/files/GeoServer/2.24.2/geoserver-2.24.2-war.zip"
   fi
-  WEB_XML="/opt/geoserver-2.24.1/webapps/geoserver/WEB-INF/web.xml"
-  #"$WEB_XML"
 
-  sed -i '43d;48d;141d;162d;193d;198d' "$WEB_XML"
-
+  
   # Mount the persistent disk
   sudo mkdir -p /opt/geoserver_data
 
@@ -73,36 +64,12 @@ resource "google_compute_instance" "geoserver" {
   fi  
   sudo mount -o discard,defaults /dev/disk/by-id/google-${google_compute_disk.geoserver_data.name} /opt/geoserver_data
   
-  sudo chown -R root:root /opt/geoserver-2.24.1
-  sudo chown -R root:root /opt/geoserver_data
+  sudo chown -R tomcat:tomcat /opt/geoserver_data
   sudo chmod -R 755 /opt/geoserver_data
 
-  # Configure GeoServer data directory
-  export GEOSERVER_DATA_DIR="/opt/geoserver_data"
-
-  # Create a systemd service file for GeoServer
-  sudo tee /etc/systemd/system/geoserver.service > /dev/null <<EOT
-  [Unit]
-  Description=GeoServer
-  After=network.target
-
-  [Service]
-  Type=simple
-  User=root
-  Environment=GEOSERVER_DATA_DIR=/opt/geoserver_data
-  Environment=GEOSERVER_HOME=/opt/geoserver-2.24.1
-  ExecStart=/opt/geoserver-2.24.1/bin/startup.sh
-  ExecStop=/opt/geoserver-2.24.1/bin/shutdown.sh
-  Restart=always
-
-  [Install]
-  WantedBy=multi-user.target
-  EOT
-
-  # Reload systemd and start the GeoServer service
-  sudo systemctl daemon-reload
-  sudo systemctl enable geoserver.service
-  sudo systemctl start geoserver.service
+  # Point GeoServer to use the mounted data directory
+  echo "GEOSERVER_DATA_DIR=/opt/geoserver_data" | sudo tee -a /etc/default/tomcat9
+  sudo systemctl restart tomcat9
 
   EOF
   scheduling {

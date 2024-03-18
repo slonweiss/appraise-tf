@@ -12,10 +12,6 @@ resource "google_cloud_run_service" "fe" {
         ports {
           container_port = 3000
         }
-        env {
-          name  = "ENDPOINT"
-          value = google_cloud_run_service.api.status[0].url
-        }
       }
     }
     metadata {
