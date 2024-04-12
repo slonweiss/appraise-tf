@@ -1,6 +1,6 @@
 
-resource "google_cloud_run_service" "fe" {
-  name     = "${var.deployment_name}-fe"
+resource "google_cloud_run_service" "mt" {
+  name     = "${var.deployment_name}-mt"
   location = var.region
   project  = var.project_id
 
@@ -8,6 +8,25 @@ resource "google_cloud_run_service" "fe" {
     spec {
       service_account_name = google_service_account.runsa.email
       containers {
+        env {
+          name = "DB_USER"
+          value_from {
+            secret_key_ref {
+              name = google_secret_manager_secret.db_user.secret_id
+              key  = "latest"
+            }
+          }
+        }
+
+        env {
+          name = "DB_PASSWORD"
+          value_from {
+            secret_key_ref {
+              name = google_secret_manager_secret.db_password.secret_id
+              key  = "latest"
+            }
+          }
+        }
         image = local.fe_image
         ports {
           container_port = 3000

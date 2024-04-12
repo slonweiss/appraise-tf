@@ -30,11 +30,27 @@ resource "google_compute_router" "geoserver_router" {
   network = google_compute_network.main.id
 }
 
-# Cloud NAT
-resource "google_compute_router_nat" "geoserver_nat" {
-  name                               = "geoserver-nat"
-  router                             = google_compute_router.geoserver_router.name
-  region                             = "us-central1"
-  nat_ip_allocate_option             = "AUTO_ONLY"
-  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+resource "google_compute_address" "geoserver_nat_ip" {
+  name   = "geoserver-nat-ip"
+  region = "us-central1"
 }
+
+# Cloud NAT with a specified static IP for NAT
+resource "google_compute_router_nat" "geoserver_nat" {
+  name                     = "geoserver-nat"
+  router                   = google_compute_router.geoserver_router.name
+  region                   = "us-central1"
+  nat_ip_allocate_option   = "MANUAL_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+  nat_ips                  = [google_compute_address.geoserver_nat_ip.id]
+}
+
+resource "google_vpc_access_connector" "serverless_connector" {
+  provider      = google-beta
+  name          = "${var.deployment_name}-vpc-cx"
+  region        = var.region  # Ensure this matches the region of your serverless services
+  network       = google_compute_network.main.name
+  ip_cidr_range = "10.8.0.0/28"  # Choose a range not used within your VPC
+  project       = var.project_id
+}
+

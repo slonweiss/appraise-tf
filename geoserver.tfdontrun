@@ -1,18 +1,3 @@
-resource "google_compute_address" "geoserver" {
-  name = "geoserver-ip"
-}
-
-resource "google_compute_firewall" "geoserver" {
-  name        = "geoserver-firewall"
-  network     = google_compute_network.main.self_link
-  allow {
-    protocol = "tcp"
-    ports    = ["22"]
-  }
-  source_ranges = ["35.235.240.0/20"]  # IAP's IP range
-  target_tags   = ["geoserver"]
-}
-
 # Create a persistent disk
 resource "google_compute_disk" "geoserver_data" {
   name = "geoserver-data-disk"
@@ -34,6 +19,7 @@ resource "google_compute_instance" "geoserver" {
   }
   network_interface {
     subnetwork = "projects/linear-equator-414922/regions/us-central1/subnetworks/appraise-private-network"
+    network_ip = "10.128.0.41" 
   }
 
   metadata_startup_script = <<-EOF
@@ -56,7 +42,14 @@ resource "google_compute_instance" "geoserver" {
   WEB_XML="/opt/geoserver-2.24.1/webapps/geoserver/WEB-INF/web.xml"
   #"$WEB_XML"
 
-  sed -i '43d;48d;141d;162d;193d;198d' "$WEB_XML"
+  # Check if modifications have already been applied
+  if grep -q "MODIFICATIONS_APPLIED" "$WEB_XML"; then
+    echo "Modifications already applied to WEB_XML, skipping"
+  else
+    # Apply modifications and add a marker
+    sed -i '43d;48d;141d;162d;193d;198d' "$WEB_XML"
+    echo "<!-- MODIFICATIONS_APPLIED -->" >> "$WEB_XML"
+  fi
 
   # Mount the persistent disk
   sudo mkdir -p /opt/geoserver_data
@@ -99,30 +92,46 @@ resource "google_compute_instance" "geoserver" {
   WantedBy=multi-user.target
   EOT
 
+  # Install the SSL certificate
+  sudo mkdir -p /etc/geoserver/ssl
+  sudo tee /etc/geoserver/ssl/geoserver.crt > /dev/null <<EOT
+  ${acme_certificate.certificate.certificate_pem}
+  EOT
+  sudo tee /etc/geoserver/ssl/geoserver.key > /dev/null <<EOT
+  ${acme_certificate.certificate.private_key_pem}
+  EOT
+
+  # Configure Jetty for SSL
+  sudo tee /opt/geoserver-2.24.1/etc/start.ini > /dev/null <<EOT
+  # SSL
+  -- module=ssl
+  jetty.ssl.port=8443
+  jetty.sslContext.keyStorePath=/etc/geoserver/ssl/geoserver.crt
+  jetty.sslContext.keyStorePassword=password
+  jetty.sslContext.keyManagerPassword=password
+  jetty.sslContext.trustStorePath=/etc/geoserver/ssl/geoserver.crt
+  jetty.sslContext.trustStorePassword=password
+  -- module=https
+  jetty.httpConfig.securePort=8443
+  EOT
+
   # Reload systemd and start the GeoServer service
   sudo systemctl daemon-reload
   sudo systemctl enable geoserver.service
   sudo systemctl start geoserver.service
 
   EOF
-  scheduling {
-    preemptible      = true
-    automatic_restart = false
-  }
+  #scheduling {
+  #  preemptible      = true
+  #  automatic_restart = false
+  #}
   service_account {
     scopes = ["storage-ro"]
   }
-  tags = ["geoserver"]
+  tags = ["geoserver-iap", "geoserver-cloudrun"]
   # Attach the persistent disk to the VM
   attached_disk {
     source      = google_compute_disk.geoserver_data.self_link
     device_name = google_compute_disk.geoserver_data.name
   }
 }
-
-# Output the public IP address of the spot instance
-#output "geoserver_public_ip" {
-#  value = google_compute_instance.geoserver.network_interface[0].access_config[0].nat_ip
-#}
-
-# Assuming 'google_compute_network.main' is defined elsewhere in your Terraform config

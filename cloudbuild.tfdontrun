@@ -1,0 +1,38 @@
+resource "google_sourcerepo_repository" "appraise_tf" {
+  name = "appraise-tf"
+}
+
+resource "google_sourcerepo_repository" "coreui_pro_react_admin_template_starter" {
+  name = "coreui-pro-react-admin-template-starter-v4.4.0"
+}
+
+resource "google_cloudbuild_trigger" "trigger" {
+  name        = "unique-trigger-name"
+  description = "Description of the trigger"
+  tags        = ["gcp-cloud-build-deploy-cloud-run", "gcp-cloud-build-deploy-cloud-run-managed", "appraise-fe"]
+
+  trigger_template {
+    branch_name = "main"
+    repo_name   = "slonweiss/coreui-pro-react-admin-template-starter-v4.4.0"
+  }
+
+  github {
+    owner = "slonweiss"
+    name  = "coreui-pro-react-admin-template-starter-v4.4.0"
+    push {
+      branch = "^main$"
+    }
+  }
+
+  filename = "Dockerfile"
+
+  approval_config {
+    approval_required = false
+  }
+
+  build_logs_config {
+    enable_build_logs = true
+  }
+
+  service_account = data.google_compute_default_service_account.default.email
+}

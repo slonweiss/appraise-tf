@@ -1,6 +1,6 @@
 resource "google_compute_instance" "postgres_instance" {
   name         = "postgres-instance"
-  machine_type = "e2-standard-2"
+  machine_type = "e2-medium"
   zone         = "us-central1-a"
 
   boot_disk {
@@ -11,21 +11,38 @@ resource "google_compute_instance" "postgres_instance" {
     }
   }
 
+  attached_disk {
+    source      = google_compute_disk.postgres_data.self_link
+    device_name = google_compute_disk.postgres_data.name
+    mode        = "READ_WRITE"
+  }
+  
   network_interface {
     network = "https://www.googleapis.com/compute/v1/projects/${var.project_id}/global/networks/${google_compute_network.main.name}"
+    network_ip = "10.128.0.43" 
   }
 
   metadata_startup_script = <<-EOF
-    #!/bin/bash
+  #!/bin/bash
+  # Install Docker
+  apt-get update
+  apt-get install -y docker.io
 
-    # Install Docker
-    apt-get update
-    apt-get install -y docker.io
+  # Start Docker service
+  systemctl start docker
+  systemctl enable docker
 
-    # Start Docker service
-    systemctl start docker
-    systemctl enable docker
+  # Create the mount point directory
+  mkdir -p /mnt/disks/postgres-data
 
+  # Mount the persistent disk
+  mount -o discard,defaults /dev/disk/by-id/google-${google_compute_disk.postgres_data.name} /mnt/disks/postgres-data
+
+  # Check if the Postgres container is already running
+  if docker ps -a --format '{{.Names}}' | grep -q '^postgres$'; then
+    # Start the existing container if it's not running
+    docker start postgres
+  else
     # Run the Postgres container using the gce-container module
     docker run -d -p 5432:5432 \
       --name postgres \
@@ -33,32 +50,28 @@ resource "google_compute_instance" "postgres_instance" {
       -e POSTGRES_USER=${module.gce-container.container.env[1].value} \
       -e POSTGRES_PASSWORD=${module.gce-container.container.env[2].value} \
       -e PGDATA=${module.gce-container.container.env[3].value} \
-      -v ${module.gce-container.volumes[0].gcePersistentDisk.pdName}:${module.gce-container.container.volumeMounts[0].mountPath} \
+      -v /mnt/disks/postgres-data:${module.gce-container.container.volumeMounts[0].mountPath} \
       ${module.gce-container.container.image}
+  fi
+
+  echo "Docker complete"
   EOF
 
-  scheduling {
-    preemptible      = true
-    automatic_restart = false
-  }
   tags = ["allow-postgres", "allow-ssh", "allow-gcr-access"]
 
   service_account {
     scopes = ["cloud-platform"]
   }
+
   lifecycle {
     ignore_changes = [
       metadata["ssh-keys"],
     ]
   }
-  attached_disk {
-    source      = google_compute_disk.postgres_data.self_link
-    device_name = google_compute_disk.postgres_data.name
-  }
 }
 
 resource "google_compute_firewall" "postgres_firewall" {
-  name    = "allow-postgres-access"
+  name    = "allow-postgres"
   network = google_compute_network.main.self_link
 
   allow {
@@ -83,19 +96,6 @@ resource "google_compute_firewall" "allow_ssh" {
   target_tags   = ["allow-ssh"]
 }
 
-resource "google_compute_firewall" "allow_gcr_access" {
-  name    = "allow-gcr-access"
-  network = google_compute_network.main.self_link
-
-  allow {
-    protocol = "tcp"
-    ports    = ["443"]
-  }
-
-  direction          = "EGRESS"
-  destination_ranges = ["199.36.153.8/30", "199.36.153.4/30"]
-  target_tags        = ["allow-gcr-access"]
-}
 
 resource "google_compute_disk" "postgres_data" {
   name  = "postgres-data"
@@ -125,7 +125,7 @@ module "gce-container" {
       },
       {
         name  = "PGDATA"
-        value = "/var/lib/postgresql/data/postgres"
+        value = "/var/lib/postgresql/data"
       }
     ]
 
@@ -134,7 +134,6 @@ module "gce-container" {
         mountPath = "/var/lib/postgresql/data"
         name      = "data"
         readOnly  = false
-        subPath   = "postgres"
       }
     ]
   }
@@ -142,10 +141,8 @@ module "gce-container" {
   volumes = [
     {
       name = "data"
-
-      gcePersistentDisk = {
-        pdName = google_compute_disk.postgres_data.name
-        fsType = "ext4"
+      hostPath = {
+        path = "/mnt/disks/postgres-data"
       }
     }
   ]
