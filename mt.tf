@@ -27,7 +27,17 @@ resource "google_cloud_run_service" "mt" {
             }
           }
         }
-        image = local.fe_image
+
+        env {
+          name = "DB_NAME"
+          value_from {
+            secret_key_ref {
+              name = google_secret_manager_secret.db_name.secret_id
+              key  = "latest"
+            }
+          }
+        }
+        image = local.api_image
         ports {
           container_port = 3000
         }

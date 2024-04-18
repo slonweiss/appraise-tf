@@ -32,11 +32,23 @@ resource "google_compute_instance" "postgres_instance" {
   systemctl start docker
   systemctl enable docker
 
-  # Create the mount point directory
+  # Create the mount directory
   mkdir -p /mnt/disks/postgres-data
 
+  # Check if the disk already has an ext4 filesystem
+  FS_TYPE=$(sudo blkid -o value -s TYPE /dev/disk/by-id/google-${google_compute_disk.postgres_data.name})
+
+  if [ "$FS_TYPE" != "ext4" ]; then
+    echo "Formatting disk as it does not have an ext4 filesystem"
+    # Format the disk only if it does not have an ext4 filesystem
+    sudo mkfs.ext4 -m 0 -E lazy_itable_init=0,lazy_journal_init=0,discard /dev/disk/by-id/google-${google_compute_disk.postgres_data.name}
+  else
+    echo "Disk already formatted with ext4, skipping format step"
+  fi  
   # Mount the persistent disk
   mount -o discard,defaults /dev/disk/by-id/google-${google_compute_disk.postgres_data.name} /mnt/disks/postgres-data
+  # Create the postgres container mount point directory
+  mkdir -p /mnt/disks/postgres-data/pgdata
 
   # Check if the Postgres container is already running
   if docker ps -a --format '{{.Names}}' | grep -q '^postgres$'; then
@@ -50,7 +62,7 @@ resource "google_compute_instance" "postgres_instance" {
       -e POSTGRES_USER=${module.gce-container.container.env[1].value} \
       -e POSTGRES_PASSWORD=${module.gce-container.container.env[2].value} \
       -e PGDATA=${module.gce-container.container.env[3].value} \
-      -v /mnt/disks/postgres-data:${module.gce-container.container.volumeMounts[0].mountPath} \
+      -v /mnt/disks/postgres-data/pgdata:${module.gce-container.container.volumeMounts[0].mountPath} \
       ${module.gce-container.container.image}
   fi
 

@@ -32,7 +32,7 @@ terraform {
 }
 
 locals {
-  api_image = "gcr.io/sic-container-repo/todo-api-postgres:latest"
+  api_image = "us-central1-docker.pkg.dev/linear-equator-414922/cloud-run-source-deploy/appraise-mt/appraise-mt@sha256:77b7b8e0bcc18269e0435c58026cb179525b1dd92158d119d619677a5d90278b"
   fe_image = "us-central1-docker.pkg.dev/linear-equator-414922/cloud-run-source-deploy/coreui-pro-react-admin-template-starter-v4.4.0/appraise-fe@sha256:4f45a751b4e85340ee35c711319f1bf6302e6885a520810ec17e0f0c2e71a336"
   geoserver_image = "gcr.io/linear-equator-414922/geoserver:latest"
 }
