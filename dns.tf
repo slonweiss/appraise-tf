@@ -42,3 +42,25 @@ resource "google_dns_record_set" "geoserver_record" {
   ttl          = 300
   rrdatas      = [google_compute_instance.geoserver_docker_instance.network_interface[0].network_ip]
 }
+
+
+resource "google_dns_managed_zone" "appraise_db_zone" {
+  name        = "appraise-db-zone"
+  dns_name    = "db.appraise.estate."
+  description = "Private DNS zone for appraise estate db"
+  visibility = "private"
+
+  private_visibility_config {
+    networks {
+      network_url = google_compute_network.main.self_link
+    }
+  }
+}
+
+resource "google_dns_record_set" "geoserver_record" {
+  name         = "db.appraise.estate."
+  managed_zone = google_dns_managed_zone.appraise_db_zone.name
+  type         = "A"
+  ttl          = 300
+  rrdatas      = [google_compute_instance.postgres_instance.network_interface[0].network_ip]
+}
