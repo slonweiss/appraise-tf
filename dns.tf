@@ -57,7 +57,7 @@ resource "google_dns_managed_zone" "appraise_db_zone" {
   }
 }
 
-resource "google_dns_record_set" "geoserver_record" {
+resource "google_dns_record_set" "db_record" {
   name         = "db.appraise.estate."
   managed_zone = google_dns_managed_zone.appraise_db_zone.name
   type         = "A"

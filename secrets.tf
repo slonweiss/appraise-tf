@@ -35,6 +35,30 @@ resource "google_secret_manager_secret_version" "db_name_version" {
   secret_data = "appraisedb"
 }
 
+resource "google_secret_manager_secret" "db_host" {
+  secret_id = "db_host"
+  replication {
+    automatic = true
+  }
+}
+
+resource "google_secret_manager_secret_version" "db_host_version" {
+  secret      = google_secret_manager_secret.db_host.id
+  secret_data = "db.appraise.estate"
+}
+
+resource "google_secret_manager_secret" "db_port" {
+  secret_id = "db_port"
+  replication {
+    automatic = true
+  }
+}
+
+resource "google_secret_manager_secret_version" "db_port_version" {
+  secret      = google_secret_manager_secret.db_port.id
+  secret_data = "5432"
+}
+
 # Grant access to the secrets to the Cloud Run service account
 resource "google_secret_manager_secret_iam_member" "db_user_access" {
   secret_id = google_secret_manager_secret.db_user.id
@@ -54,3 +78,14 @@ resource "google_secret_manager_secret_iam_member" "db_name_access" {
   member    = "serviceAccount:${google_service_account.runsa.email}"
 }
 
+resource "google_secret_manager_secret_iam_member" "db_host_access" {
+  secret_id = google_secret_manager_secret.db_host.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.runsa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "db_port_access" {
+  secret_id = google_secret_manager_secret.db_port.id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.runsa.email}"
+}
