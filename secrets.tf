@@ -32,7 +32,7 @@ resource "google_secret_manager_secret" "db_name" {
 
 resource "google_secret_manager_secret_version" "db_name_version" {
   secret      = google_secret_manager_secret.db_name.id
-  secret_data = "appraisedb"
+  secret_data = "appraisepg"
 }
 
 resource "google_secret_manager_secret" "db_host" {
